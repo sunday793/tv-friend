@@ -3,7 +3,7 @@ import flet as ft
 from app import build_app
 
 def main(page: ft.Page):
-    page.title = "TV Time Clone"
+    page.title = "TV Friend"
     page.window.width = 400
     page.window.height = 600
     page.theme_mode = ft.ThemeMode.LIGHT
