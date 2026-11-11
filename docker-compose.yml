@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: tvfriend_db
+    environment:
+      POSTGRES_USER: tvfriend
+      POSTGRES_PASSWORD: tvfriend
+      POSTGRES_DB: tvfriend
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
