@@ -40,6 +40,8 @@ class Show(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     source: Mapped[str] = mapped_column(String(50), nullable=False)
     external_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+
+    media_type: Mapped[str] = mapped_column(String(50), nullable=False)
     
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     year: Mapped[int | None] = mapped_column(Integer, nullable=True)
