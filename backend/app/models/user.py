@@ -9,7 +9,7 @@ Relationships:
 """
 
 from sqlalchemy import Boolean, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
 
@@ -54,5 +54,9 @@ class User(Base, TimestampMixin):
         Boolean,
         default=True,
         nullable=False,
+    )
+
+    watchlist: Mapped[list["WatchlistItem"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
     )
     

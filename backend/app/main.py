@@ -7,7 +7,7 @@ This is the module that uvicorn runs (e.g. `uvicorn app.main:app --reload`).
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth
+from app.routers import api_router
 
 app = FastAPI(
     title="TV Friend API",
@@ -23,8 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router)
-
+app.include_router(api_router)
 
 @app.get("/")
 def root():
