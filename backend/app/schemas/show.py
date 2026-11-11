@@ -50,4 +50,23 @@ class ShowRead(BaseModel):
     year: int | None = None
     poster_url: str | None = None
     overview: str | None = None
+
+
+class WatchlistUpdateRequest(BaseModel):
+    """Request body to update a watchlist item.
+
+    All fields are optional: if a field is not provided, it will not
+    be updated.
+    """
+
+    status: str | None = Field(
+        default=None, 
+        description="New status (e.g., 'watching', 'completed', 'dropped')"
+    )
+    rating: int | None = Field(
+        default=None, 
+        ge=1, 
+        le=10, 
+        description="Rating from 1 to 10"
+    )
     

@@ -8,7 +8,12 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
-from app.schemas.show import MediaSearchResult, WatchlistAddRequest, WatchlistItemRead
+from app.schemas.show import (
+    MediaSearchResult,
+    WatchlistAddRequest,
+    WatchlistItemRead,
+    WatchlistUpdateRequest,
+)
 from app.services import kinopoisk_client, show_service
 
 router = APIRouter(prefix="/api/shows", tags=["shows"])
@@ -61,6 +66,41 @@ def add_to_watchlist(
     except kinopoisk_client.KinopoiskAPIError as e:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(e)
+        )
+
+
+@router.patch("/watchlist/{item_id}", response_model=WatchlistItemRead)
+def update_watchlist_item(
+    item_id: int,
+    request: WatchlistUpdateRequest,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Update the status or rating of a media item in the watchlist."""
+    try:
+        return show_service.update_watchlist_item(
+            db, current_user, item_id, status=request.status, rating=request.rating
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+@router.delete("/watchlist/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_watchlist_item(
+    item_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Remove a media item from the watchlist."""
+    try:
+        show_service.remove_from_watchlist(db, current_user, item_id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         )
     

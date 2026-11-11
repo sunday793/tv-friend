@@ -133,3 +133,69 @@ def get_user_watchlist(db: Session, user: User) -> list[WatchlistItem]:
         .order_by(WatchlistItem.created_at.desc())
     )
     return list(db.execute(stmt).scalars().all())
+
+
+def update_watchlist_item(
+    db: Session, 
+    user: User, 
+    item_id: int, 
+    status: str | None = None, 
+    rating: int | None = None
+) -> WatchlistItem:
+    """Update the status or rating of a watchlist item.
+
+    Args:
+        db: Active database session.
+        user: The authenticated user (ensures they own the item).
+        item_id: The ID of the WatchlistItem to update.
+        status: The new status (optional).
+        rating: The new rating (optional).
+
+    Returns:
+        The updated WatchlistItem.
+
+    Raises:
+        ValueError: If the item is not found or does not belong to the user.
+    """
+    stmt = select(WatchlistItem).where(
+        WatchlistItem.id == item_id,
+        WatchlistItem.user_id == user.id
+    )
+    item = db.execute(stmt).scalar_one_or_none()
+
+    if not item:
+        raise ValueError("Watchlist item not found")
+
+    if status is not None:
+        item.status = status
+    if rating is not None:
+        item.rating = rating
+
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def remove_from_watchlist(db: Session, user: User, item_id: int) -> None:
+    """Remove an item from the user's watchlist.
+
+    Args:
+        db: Active database session.
+        user: The authenticated user (ensures they own the item).
+        item_id: The ID of the WatchlistItem to delete.
+
+    Raises:
+        ValueError: If the item is not found or does not belong to the user.
+    """
+    stmt = select(WatchlistItem).where(
+        WatchlistItem.id == item_id,
+        WatchlistItem.user_id == user.id
+    )
+    item = db.execute(stmt).scalar_one_or_none()
+
+    if not item:
+        raise ValueError("Watchlist item not found")
+
+    db.delete(item)
+    db.commit()
