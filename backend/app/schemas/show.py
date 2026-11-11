@@ -69,4 +69,34 @@ class WatchlistUpdateRequest(BaseModel):
         le=10, 
         description="Rating from 1 to 10"
     )
+
+
+class PersonRead(BaseModel):
+    """Representation of an actor."""
+    model_config = ConfigDict(from_attributes=True)
+    
+    external_id: str
+    name: str
+    photo_url: str | None = None
+
+
+class ShowCastRead(BaseModel):
+    """Representation of a cast member with their role."""
+    model_config = ConfigDict(from_attributes=True)
+    
+    person: PersonRead
+    character_name: str | None = None
+
+
+class ShowDetailsRead(BaseModel):
+    """Detailed representation of a show, including its cast."""
+    model_config = ConfigDict(from_attributes=True)
+    
+    external_id: str
+    title: str
+    media_type: str
+    year: int | None = None
+    poster_url: str | None = None
+    overview: str | None = None
+    cast: list[ShowCastRead] = []
     

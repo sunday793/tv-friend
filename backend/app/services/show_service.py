@@ -8,7 +8,7 @@ watchlist management.
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.show import Show, WatchlistItem
+from app.models.show import Show, WatchlistItem, Person, ShowCast
 from app.models.user import User
 from app.services import kinopoisk_client
 from app.services.kinopoisk_client import KinopoiskAPIError
@@ -31,19 +31,7 @@ def search_media(query: str) -> list[kinopoisk_client.ExternalMedia]:
 
 
 def get_or_create_show(db: Session, external_id: str, source: str = "kinopoisk") -> Show:
-    """Get a show from the database, or fetch and create it if missing.
-
-    Args:
-        db: Active database session.
-        external_id: The ID of the media in the external API.
-        source: The name of the external API (default "kinopoisk").
-
-    Returns:
-        The existing or newly created Show object.
-
-    Raises:
-        KinopoiskAPIError: If the media is not in the DB and the API fails.
-    """
+    """Get a show from the database, or fetch and create it if missing."""
     # 1. Try to find it in our DB first
     stmt = select(Show).where(
         Show.source == source,
@@ -56,6 +44,10 @@ def get_or_create_show(db: Session, external_id: str, source: str = "kinopoisk")
 
     # 2. If not found, fetch from external API
     external_media = kinopoisk_client.get_media_details(external_id)
+    try:
+        cast_list = kinopoisk_client.get_show_cast(external_id)
+    except kinopoisk_client.KinopoiskAPIError:
+        cast_list = [] # Если актеры недоступны, просто идем дальше
 
     # 3. Save to DB
     new_show = Show(
@@ -68,9 +60,37 @@ def get_or_create_show(db: Session, external_id: str, source: str = "kinopoisk")
         overview=external_media.overview,
     )
     db.add(new_show)
+    db.flush()
+
+    # 4. Save cast
+    for cast_member in cast_list:
+        # Search for an actor in our db
+        person_stmt = select(Person).where(
+            Person.source == source,
+            Person.external_id == cast_member.person.external_id
+        )
+        person = db.execute(person_stmt).scalar_one_or_none()
+        
+        if not person:
+            person = Person(
+                source=source,
+                external_id=cast_member.person.external_id,
+                name=cast_member.person.name,
+                photo_url=cast_member.person.photo_url,
+            )
+            db.add(person)
+            db.flush()
+
+        # Create the connection
+        cast_link = ShowCast(
+            show_id=new_show.id,
+            person_id=person.id,
+            character_name=cast_member.character_name,
+        )
+        db.add(cast_link)
+
     db.commit()
     db.refresh(new_show)
-    
     return new_show
 
 

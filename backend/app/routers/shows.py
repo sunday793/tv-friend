@@ -13,6 +13,7 @@ from app.schemas.show import (
     WatchlistAddRequest,
     WatchlistItemRead,
     WatchlistUpdateRequest,
+    ShowDetailsRead,
 )
 from app.services import kinopoisk_client, show_service
 
@@ -101,6 +102,24 @@ def delete_watchlist_item(
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+@router.get("/{external_id}", response_model=ShowDetailsRead)
+def get_media_details(
+    external_id: str,
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Get detailed information about a specific media, including cast.
+    
+    If the media is not in our database, it will be fetched from the API.
+    """
+    try:
+        return show_service.get_or_create_show(db, external_id)
+    except kinopoisk_client.KinopoiskAPIError as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
             detail=str(e)
         )
     

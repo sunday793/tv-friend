@@ -118,3 +118,67 @@ def get_media_details(external_id: str) -> ExternalMedia:
         poster_url=data.get("posterUrl"),
         overview=data.get("description"),
     )
+
+
+@dataclass
+class ExternalPerson:
+    """Neutral representation of a person (actor)."""
+    external_id: str
+    name: str
+    photo_url: str | None
+
+
+@dataclass
+class ExternalCastMember:
+    """Association of a person to a show with a specific role."""
+    person: ExternalPerson
+    character_name: str | None
+
+
+def get_show_cast(external_id: str) -> list[ExternalCastMember]:
+    """Fetch the cast (actors) for a specific show.
+    
+    Note: On the free tier of the API, this might return an empty list
+    or raise an error. We handle it gracefully.
+
+    Args:
+        external_id: The Kinopoisk ID of the show.
+
+    Returns:
+        A list of ExternalCastMember objects.
+
+    Raises:
+        KinopoiskAPIError: If the request fails or returns a bad status.
+    """
+    url = f"{settings.KINOPOISK_BASE_URL}/api/v2.2/films/{external_id}/staff"
+
+    try:
+        with httpx.Client() as client:
+            response = client.get(url, headers=_get_headers())
+            response.raise_for_status()
+            data = response.json()
+    except httpx.HTTPError as e:
+        # If the API returns 403/404, we might just return an empty list
+        # instead of crashing the whole process.
+        if getattr(e, "response", None) and e.response.status_code in (403, 404):
+            return []
+        raise KinopoiskAPIError(f"Failed to fetch cast for {external_id}: {e}") from e
+
+    cast = []
+    for item in data:
+        # We are only interested in actors (professionKey == "ACTOR")
+        if item.get("professionKey") != "ACTOR":
+            continue
+            
+        person = ExternalPerson(
+            external_id=str(item["staffId"]),
+            name=item.get("nameRu") or item.get("nameEn") or "Unknown",
+            photo_url=item.get("posterUrl"),
+        )
+        cast.append(
+            ExternalCastMember(
+                person=person,
+                character_name=item.get("description"), # Usually the role name
+            )
+        )
+    return cast
